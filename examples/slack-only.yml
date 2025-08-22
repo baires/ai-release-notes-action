@@ -1,0 +1,62 @@
+name: 'Release Notes - Slack Notifications Only'
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+      - dev
+
+jobs:
+  notify-team:
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'notify-team')
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Environment Config
+        id: config
+        run: |
+          BRANCH="${{ github.event.pull_request.base.ref }}"
+          if [ "$BRANCH" = "main" ]; then
+            echo "environment=PROD" >> $GITHUB_OUTPUT
+            echo "slack_webhook=${{ secrets.SLACK_WEBHOOK_URL_PROD }}" >> $GITHUB_OUTPUT
+            echo "slack_channel=deployments-prod" >> $GITHUB_OUTPUT
+          else
+            echo "environment=DEV" >> $GITHUB_OUTPUT
+            echo "slack_webhook=${{ secrets.SLACK_WEBHOOK_URL_DEV }}" >> $GITHUB_OUTPUT
+            echo "slack_channel=deployments-dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Slack Notification
+        uses: ./  # Use this for local testing, or baires/ai-release-notes-action@v1 for marketplace
+        with:
+          # Core settings
+          trigger_label: 'notify-team'
+          environment: ${{ steps.config.outputs.environment }}
+          
+          # Disable other features - Slack only
+          create_release: false
+          update_changelog: false
+          
+          # Slack configuration
+          enable_slack: true
+          slack_webhook_url: ${{ steps.config.outputs.slack_webhook }}
+          slack_channel: ${{ steps.config.outputs.slack_channel }}
+          slack_mention_users: 'devops-team'
+          
+          # Simple version management for notifications
+          version_strategy: 'patch'
+          
+          # Optional AI for better messages
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          custom_prompt: |
+            Create a brief, friendly Slack message about this deployment.
+            Keep it casual and informative for the development team.
+            Focus on what changed and any important notes for the team.
+            
+            This is a ${environment} deployment.

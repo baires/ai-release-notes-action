@@ -1,0 +1,74 @@
+name: 'Release Notes - Vertex AI'
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  release-notes:
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release-notes')
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+      id-token: write  # Required for Workload Identity Federation
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Generate Release Notes with Vertex AI
+        uses: ./  # Use this for local testing, or baires/ai-release-notes-action@v1 for marketplace
+        with:
+          # Core Configuration
+          trigger_label: 'release-notes'
+          target_branch: 'main'
+          environment: 'PROD'
+          
+          # Vertex AI Configuration
+          use_vertex_ai: true
+          gcp_project_id: ${{ vars.GOOGLE_CLOUD_PROJECT }}
+          gcp_location: ${{ vars.GOOGLE_CLOUD_LOCATION }}
+          gcp_workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          gcp_service_account: ${{ vars.SERVICE_ACCOUNT_EMAIL }}
+          
+          # Custom prompt for enterprise use
+          custom_prompt: |
+            You are a technical documentation specialist for an enterprise SaaS platform.
+            
+            Analyze the pull request changes and generate professional release notes suitable for:
+            - Customer-facing changelog
+            - Internal engineering documentation
+            - Compliance and audit trails
+            
+            Requirements:
+            - Use clear, professional language
+            - Highlight security improvements
+            - Note any API changes or breaking changes
+            - Include migration guidance if needed
+            - Focus on business value and customer impact
+            
+            Generate release notes for version ${version} in ${environment} environment.
+          
+          # Release Configuration
+          version_strategy: 'auto'
+          create_release: true
+          update_changelog: true
+          
+          # Enterprise features
+          include_commit_links: true
+          include_pr_links: true
+          skip_if_no_changes: false

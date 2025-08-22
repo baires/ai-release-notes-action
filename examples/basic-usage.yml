@@ -1,0 +1,42 @@
+name: 'Release Notes - Basic Usage'
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+
+jobs:
+  release-notes:
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release-notes')
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Release Notes
+        uses: ./  # Use this for local testing, or baires/ai-release-notes-action@v1 for marketplace
+        with:
+          # Core settings
+          trigger_label: 'release-notes'
+          target_branch: 'main'
+          
+          # AI Configuration (optional)
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          
+          # Version settings
+          version_strategy: 'patch'  # or 'minor', 'major', 'auto'
+          
+          # Enable/disable features
+          create_release: true
+          update_changelog: true
+          enable_slack: false

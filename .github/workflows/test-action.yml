@@ -1,0 +1,66 @@
+name: Test Action
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main, dev]
+
+jobs:
+  test-action:
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Test AI Release Notes Action
+        uses: ./
+        with:
+          # Core Configuration
+          trigger_label: 'test-action'
+          target_branch: ${{ github.event.pull_request.base.ref }}
+          environment: ${{ github.event.pull_request.base.ref == 'main' && 'PROD' || 'DEV' }}
+          
+          # AI Configuration (optional for testing)
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          
+          # Version Management
+          version_strategy: 'patch'
+          version_prefix: 'test-v'
+          
+          # GitHub Release (disabled for testing)
+          create_release: false
+          
+          # Changelog (disabled for testing)
+          update_changelog: false
+          
+          # Slack (disabled for testing)
+          enable_slack: false
+          
+          # Content options
+          include_commit_links: true
+          include_pr_links: true
+          max_commits_fallback: 5
+
+      - name: Display Results
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Version: ${{ steps.test.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- AI Generated: ${{ steps.test.outputs.ai_generated }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Commits Analyzed: ${{ steps.test.outputs.commits_analyzed }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "release-notes.md" ]; then
+            echo "### Generated Release Notes" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`markdown" >> $GITHUB_STEP_SUMMARY
+            head -20 release-notes.md >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi

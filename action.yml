@@ -1,0 +1,189 @@
+name: 'AI-Powered Release Notes Generator'
+description: 'Generate intelligent release notes using AI, with optional Slack notifications, GitHub releases, and changelog updates'
+author: 'Your Organization'
+branding:
+  icon: 'file-text'
+  color: 'blue'
+
+inputs:
+  # Core Configuration
+  trigger_label:
+    description: 'Label required on PR to trigger release notes generation'
+    required: false
+    default: 'release-notes'
+  
+  target_branch:
+    description: 'Target branch for release (main, dev, etc.)'
+    required: false
+    default: 'main'
+  
+  # AI Configuration
+  gemini_api_key:
+    description: 'Gemini API key for AI-powered release notes'
+    required: false
+  
+  custom_prompt:
+    description: 'Custom prompt template for AI release notes generation'
+    required: false
+  
+  # Version Management
+  version_strategy:
+    description: 'Version increment strategy: patch, minor, major, auto'
+    required: false
+    default: 'patch'
+  
+  version_prefix:
+    description: 'Version prefix (e.g., v, release-)'
+    required: false
+    default: 'v'
+  
+  # Environment Configuration
+  environment:
+    description: 'Deployment environment (PROD, DEV, STAGING)'
+    required: false
+    default: 'PROD'
+  
+  # GitHub Release Options
+  create_release:
+    description: 'Create GitHub release (true/false)'
+    required: false
+    default: 'true'
+  
+  release_draft:
+    description: 'Create release as draft (true/false)'
+    required: false
+    default: 'false'
+  
+  release_prerelease:
+    description: 'Mark release as prerelease (true/false)'
+    required: false
+    default: 'false'
+  
+  # Changelog Options
+  update_changelog:
+    description: 'Update CHANGELOG.md file (true/false)'
+    required: false
+    default: 'true'
+  
+  changelog_file:
+    description: 'Path to changelog file'
+    required: false
+    default: 'CHANGELOG.md'
+  
+  # Slack Notification Options
+  enable_slack:
+    description: 'Enable Slack notifications (true/false)'
+    required: false
+    default: 'false'
+  
+  slack_webhook_url:
+    description: 'Slack webhook URL for notifications'
+    required: false
+  
+  slack_channel:
+    description: 'Slack channel name (without #)'
+    required: false
+  
+  slack_mention_users:
+    description: 'Comma-separated list of users to mention in Slack'
+    required: false
+  
+  slack_mention_groups:
+    description: 'Comma-separated list of groups to mention in Slack'
+    required: false
+  
+  # Git Configuration
+  git_user_name:
+    description: 'Git user name for commits'
+    required: false
+    default: 'github-actions[bot]'
+  
+  git_user_email:
+    description: 'Git user email for commits'
+    required: false
+    default: 'github-actions[bot]@users.noreply.github.com'
+  
+  # Advanced Options
+  skip_if_no_changes:
+    description: 'Skip release if no significant changes detected (true/false)'
+    required: false
+    default: 'false'
+  
+  include_commit_links:
+    description: 'Include links to commits in release notes (true/false)'
+    required: false
+    default: 'true'
+  
+  include_pr_links:
+    description: 'Include links to PRs in release notes (true/false)'
+    required: false
+    default: 'true'
+  
+  max_commits_fallback:
+    description: 'Maximum commits to include in fallback notes'
+    required: false
+    default: '10'
+  
+  # Output Format Options
+  output_format:
+    description: 'Output format: markdown, html, json'
+    required: false
+    default: 'markdown'
+  
+  # GCP Configuration (for Vertex AI)
+  gcp_project_id:
+    description: 'Google Cloud Project ID for Vertex AI'
+    required: false
+  
+  gcp_location:
+    description: 'Google Cloud Location for Vertex AI'
+    required: false
+    default: 'us-central1'
+  
+  gcp_workload_identity_provider:
+    description: 'GCP Workload Identity Provider'
+    required: false
+  
+  gcp_service_account:
+    description: 'GCP Service Account Email'
+    required: false
+  
+  use_vertex_ai:
+    description: 'Use Vertex AI instead of Gemini API (true/false)'
+    required: false
+    default: 'false'
+
+outputs:
+  version:
+    description: 'Generated version number'
+  
+  previous_version:
+    description: 'Previous version number'
+  
+  release_notes:
+    description: 'Generated release notes content'
+  
+  release_url:
+    description: 'URL of created GitHub release'
+  
+  tag_name:
+    description: 'Created git tag name'
+  
+  build_number:
+    description: 'Generated build number'
+  
+  changelog_updated:
+    description: 'Whether changelog was updated'
+  
+  slack_sent:
+    description: 'Whether Slack notification was sent'
+  
+  commits_analyzed:
+    description: 'Number of commits analyzed'
+  
+  ai_generated:
+    description: 'Whether release notes were AI-generated'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'

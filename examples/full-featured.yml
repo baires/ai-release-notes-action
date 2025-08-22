@@ -1,0 +1,101 @@
+name: 'Release Notes - Full Featured'
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+      - dev
+
+jobs:
+  release-notes:
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release-notes')
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate GitHub App Token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+        continue-on-error: true
+
+      - name: Determine Environment
+        id: environment
+        run: |
+          BRANCH="${{ github.event.pull_request.base.ref }}"
+          if [ "$BRANCH" = "main" ]; then
+            echo "environment=PROD" >> $GITHUB_OUTPUT
+            echo "slack_channel=releases-prod" >> $GITHUB_OUTPUT
+            echo "slack_webhook_url=${{ secrets.SLACK_WEBHOOK_URL_PROD }}" >> $GITHUB_OUTPUT
+            echo "create_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "environment=DEV" >> $GITHUB_OUTPUT
+            echo "slack_channel=releases-dev" >> $GITHUB_OUTPUT
+            echo "slack_webhook_url=${{ secrets.SLACK_WEBHOOK_URL_DEV }}" >> $GITHUB_OUTPUT
+            echo "create_release=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Release Notes
+        uses: ./  # Use this for local testing, or baires/ai-release-notes-action@v1 for marketplace
+        with:
+          # Authentication
+          token: ${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}
+          
+          # Core Configuration
+          trigger_label: 'release-notes'
+          target_branch: ${{ github.event.pull_request.base.ref }}
+          environment: ${{ steps.environment.outputs.environment }}
+          
+          # AI Configuration - Using Gemini API
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          custom_prompt: |
+            You are a technical writer for our SaaS platform. Analyze the changes and create user-friendly release notes.
+            Focus on user impact and business value.
+            
+            Context: This is a ${environment} deployment for our customer-facing application.
+            
+            Generate release notes for version ${version} with build ${buildNumber}.
+            
+            Format as requested with clear user-facing language.
+          
+          # Version Management
+          version_strategy: 'auto'  # Determine from PR labels and commits
+          version_prefix: 'v'
+          
+          # GitHub Release Configuration
+          create_release: ${{ steps.environment.outputs.create_release }}
+          release_draft: false
+          release_prerelease: ${{ steps.environment.outputs.environment == 'DEV' }}
+          
+          # Changelog Configuration
+          update_changelog: true
+          changelog_file: 'CHANGELOG.md'
+          
+          # Slack Notifications
+          enable_slack: true
+          slack_webhook_url: ${{ steps.environment.outputs.slack_webhook_url }}
+          slack_channel: ${{ steps.environment.outputs.slack_channel }}
+          slack_mention_users: 'engineering-team,product-team'
+          slack_mention_groups: 'here'
+          
+          # Content Options
+          include_commit_links: true
+          include_pr_links: true
+          max_commits_fallback: 15
+          
+          # Advanced Options
+          skip_if_no_changes: false
+          output_format: 'markdown'
