@@ -86,12 +86,27 @@ AI-powered GitHub Action that automatically generates intelligent release notes 
 The release workflow (`release.yml`) handles:
 
 1. **Version Detection** - From manual input or package.json changes
-2. **Testing** - Runs full test suite
+2. **Testing** - Runs full test suite  
 3. **Building** - Creates distribution files
-4. **Tagging** - Creates semantic version tags
-5. **Release Creation** - Generates release notes and GitHub release
-6. **Major Version Update** - Updates `v1`, `v2` tags to point to latest
-7. **Marketplace Guidance** - Creates issue with publication checklist
+4. **Documentation Updates** - Automatically updates all version references
+5. **Version Verification** - Ensures all references are updated consistently
+6. **Tagging** - Creates semantic version tags
+7. **Release Creation** - Generates release notes and GitHub release
+8. **Major Version Update** - Updates `v1`, `v2` tags to point to latest
+9. **Marketplace Guidance** - Creates issue with publication checklist
+
+### 📝 Automatic Version Reference Updates
+
+Every release automatically updates version references in:
+- All example workflows (`examples/*.yml`)
+- README.md usage examples
+- RELEASES.md documentation
+- Any other documentation files
+
+**Version Update Strategy:**
+- **Specific versions**: Updated to exact release version (e.g., `@v1.0.0`, `@v1.1.0`)
+- **Major versions**: Updated to current major version (e.g., `@v1`, `@v2`)
+- **Consistency**: All references within a file maintain the same version style
 
 ## 🛠️ Release Files
 
@@ -102,6 +117,7 @@ The following files are involved in the release process:
 - `dist/` - Built distribution files (required for marketplace)
 - `CHANGELOG.md` - Manual changelog (optional)
 - `scripts/release.sh` - Release automation script
+- `scripts/verify-versions.sh` - Version consistency verification script
 - `.github/workflows/release.yml` - Automated release workflow
 - `.github/workflows/marketplace-publish.yml` - Marketplace validation
 
@@ -128,6 +144,27 @@ git commit -m "chore: rebuild distribution files"
 npm test
 # Or run specific test
 npm test -- core.test.js
+```
+
+### "Version references inconsistent"
+```bash
+# Check version reference consistency
+./scripts/verify-versions.sh
+
+# Check against specific version
+./scripts/verify-versions.sh v1.0.0
+
+# Fix all version references automatically
+./scripts/release.sh 1.0.0
+```
+
+### "Mixed version references in documentation"
+```bash
+# Manually update specific files
+sed -i 's|baires/ai-release-notes-action@v[0-9]*\.[0-9]*\.[0-9]*|baires/ai-release-notes-action@v1.0.0|g' README.md
+
+# Or use the release script to update everything
+./scripts/release.sh 1.0.0
 ```
 
 ## 📚 Resources
