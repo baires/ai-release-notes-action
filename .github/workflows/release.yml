@@ -87,6 +87,107 @@ jobs:
             echo "Tag $VERSION does not exist, proceeding with release"
           fi
 
+      - name: Update version references in documentation
+        id: update_versions
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          MAJOR_VERSION=$(echo $VERSION | sed 's/\(v[0-9]*\).*/\1/')
+          
+          echo "Updating version references to $VERSION (major: $MAJOR_VERSION)"
+          
+          # Update example workflows
+          find examples/ -name "*.yml" -type f -exec sed -i.bak \
+            "s|baires/ai-release-notes-action@v[0-9]*\.[0-9]*\.[0-9]*|baires/ai-release-notes-action@$VERSION|g" {} \;
+          
+          find examples/ -name "*.yml" -type f -exec sed -i.bak \
+            "s|baires/ai-release-notes-action@v[0-9]*|baires/ai-release-notes-action@$MAJOR_VERSION|g" {} \;
+          
+          # Update README.md
+          sed -i.bak "s|baires/ai-release-notes-action@v[0-9]*\.[0-9]*\.[0-9]*|baires/ai-release-notes-action@$VERSION|g" README.md
+          sed -i.bak "s|baires/ai-release-notes-action@v[0-9]*|baires/ai-release-notes-action@$MAJOR_VERSION|g" README.md
+          
+          # Update RELEASES.md
+          if [ -f "RELEASES.md" ]; then
+            sed -i.bak "s|baires/ai-release-notes-action@v[0-9]*\.[0-9]*\.[0-9]*|baires/ai-release-notes-action@$VERSION|g" RELEASES.md
+            sed -i.bak "s|baires/ai-release-notes-action@v[0-9]*|baires/ai-release-notes-action@$MAJOR_VERSION|g" RELEASES.md
+          fi
+          
+          # Update source code references (GitHub URLs in footer, etc.)
+          find src/ -name "*.js" -type f -exec sed -i.bak \
+            "s|github.com/baires/ai-release-notes-action|github.com/baires/ai-release-notes-action|g" {} \;
+          
+          # Clean up backup files
+          find . -name "*.bak" -delete
+          
+          # Check if any files were changed
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "version_updated=true" >> $GITHUB_OUTPUT
+            echo "Updated version references in:"
+            git status --porcelain
+          else
+            echo "version_updated=false" >> $GITHUB_OUTPUT
+            echo "No version references needed updating"
+          fi
+
+      - name: Commit version reference updates
+        if: steps.update_versions.outputs.version_updated == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          git add examples/ README.md RELEASES.md src/
+          git commit -m "docs: update version references to $VERSION
+          
+          Automatically update all documentation and example workflows to reference
+          the new release version $VERSION.
+          
+          This ensures users always see current, working examples in documentation."
+
+      - name: Verify version references updated
+        if: steps.update_versions.outputs.version_updated == 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          MAJOR_VERSION=$(echo $VERSION | sed 's/\(v[0-9]*\).*/\1/')
+          
+          echo "🔍 Verifying all version references were updated..."
+          
+          # Check examples directory
+          EXAMPLE_ISSUES=$(find examples/ -name "*.yml" -exec grep -l "baires/ai-release-notes-action@v[0-9]*\.[0-9]*\.[0-9]*" {} \; | grep -v "@$VERSION" || true)
+          if [ -n "$EXAMPLE_ISSUES" ]; then
+            echo "❌ Found outdated version references in examples:"
+            echo "$EXAMPLE_ISSUES"
+            exit 1
+          fi
+          
+          # Check for mixed version references (should all be major or specific version)
+          ALL_REFS=$(find examples/ README.md RELEASES.md -type f 2>/dev/null -exec grep -o "baires/ai-release-notes-action@v[0-9]*\(\.[0-9]*\.[0-9]*\)\?" {} \; | sort | uniq)
+          echo "📋 Found action version references:"
+          echo "$ALL_REFS" | sed 's/^/  - /'
+          
+          # Check GitHub URL references in source code
+          SRC_REFS=$(find src/ -name "*.js" -type f 2>/dev/null -exec grep -o "github.com/baires/ai-release-notes-action" {} \; | sort | uniq || echo "")
+          if [ -n "$SRC_REFS" ]; then
+            echo "📋 Found GitHub URL references in source:"
+            echo "$SRC_REFS" | sed 's/^/  - /'
+          fi
+          
+          # Count different version patterns
+          SPECIFIC_COUNT=$(echo "$ALL_REFS" | grep -c "@$VERSION" || echo "0")
+          MAJOR_COUNT=$(echo "$ALL_REFS" | grep -c "@$MAJOR_VERSION" || echo "0")
+          
+          echo "✅ Version reference summary:"
+          echo "  - Specific version ($VERSION): $SPECIFIC_COUNT"
+          echo "  - Major version ($MAJOR_VERSION): $MAJOR_COUNT"
+          
+          if [ "$SPECIFIC_COUNT" -eq 0 ] && [ "$MAJOR_COUNT" -eq 0 ]; then
+            echo "⚠️  No version references found - this might be expected for initial setup"
+          else
+            echo "✅ Version references successfully updated"
+          fi
+
       - name: Generate release notes
         id: release_notes
         if: steps.check_tag.outputs.exists == 'false'

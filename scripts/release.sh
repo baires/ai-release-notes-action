@@ -69,6 +69,42 @@ info "Updating package.json version to $VERSION..."
 sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
 rm package.json.bak
 
+# Update version references in documentation
+info "Updating version references in documentation..."
+MAJOR_VERSION="v${VERSION%%.*}"
+
+# Update example workflows
+find examples/ -name "*.yml" -type f -exec sed -i.bak \
+  "s|baires/ai-release-notes-action@v[0-9]*\.[0-9]*\.[0-9]*|baires/ai-release-notes-action@$VTAG|g" {} \;
+
+find examples/ -name "*.yml" -type f -exec sed -i.bak \
+  "s|baires/ai-release-notes-action@v[0-9]*|baires/ai-release-notes-action@$MAJOR_VERSION|g" {} \;
+
+# Update README.md
+sed -i.bak "s|baires/ai-release-notes-action@v[0-9]*\.[0-9]*\.[0-9]*|baires/ai-release-notes-action@$VTAG|g" README.md
+sed -i.bak "s|baires/ai-release-notes-action@v[0-9]*|baires/ai-release-notes-action@$MAJOR_VERSION|g" README.md
+
+# Update RELEASES.md
+if [ -f "RELEASES.md" ]; then
+  sed -i.bak "s|baires/ai-release-notes-action@v[0-9]*\.[0-9]*\.[0-9]*|baires/ai-release-notes-action@$VTAG|g" RELEASES.md
+  sed -i.bak "s|baires/ai-release-notes-action@v[0-9]*|baires/ai-release-notes-action@$MAJOR_VERSION|g" RELEASES.md
+fi
+
+# Update source code references (GitHub URLs in footer, etc.)
+find src/ -name "*.js" -type f -exec sed -i.bak \
+  "s|github.com/baires/ai-release-notes-action|github.com/baires/ai-release-notes-action|g" {} \;
+
+# Clean up backup files
+find . -name "*.bak" -delete
+
+# Show what was updated
+if [ -n "$(git status --porcelain)" ]; then
+  success "Updated version references in documentation:"
+  git status --porcelain | sed 's/^/  /'
+else
+  info "No version references needed updating"
+fi
+
 # Run tests
 info "Running tests..."
 npm test
@@ -83,16 +119,21 @@ if [ -n "$(git status --porcelain dist/)" ]; then
     git add dist/
 fi
 
-# Commit version bump
-info "Committing version bump..."
-git add package.json
+# Commit version bump and documentation updates
+info "Committing version bump and documentation updates..."
+git add package.json examples/ README.md RELEASES.md src/
 git commit -m "chore: bump version to $VERSION
 
 Prepare for release $VTAG
 
-- Update package.json version
+- Update package.json version to $VERSION
+- Update all documentation version references to $VTAG
+- Update example workflows to use $MAJOR_VERSION
 - Rebuild distribution files
-- Ready for marketplace publication"
+- Ready for marketplace publication
+
+Updated files:
+$(git status --porcelain | sed 's/^/- /')"
 
 # Create and push tag
 info "Creating and pushing tag $VTAG..."
