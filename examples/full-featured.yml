@@ -49,7 +49,7 @@ jobs:
           fi
 
       - name: Generate Release Notes
-        uses: ./  # Use this for local testing, or baires/ai-release-notes-action@v1 for marketplace
+        uses: baires/ai-release-notes-action@v1
         with:
           # Authentication
           token: ${{ steps.generate_token.outputs.token || secrets.GITHUB_TOKEN }}

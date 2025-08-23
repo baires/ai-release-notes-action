@@ -24,7 +24,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate Release Notes
-        uses: ./  # Use this for local testing, or baires/ai-release-notes-action@v1 for marketplace
+        uses: baires/ai-release-notes-action@v1
         with:
           # Core settings
           trigger_label: 'release-notes'
