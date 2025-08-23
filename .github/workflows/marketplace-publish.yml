@@ -1,0 +1,156 @@
+name: Marketplace Publish Check
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  marketplace-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate action for marketplace
+        run: |
+          echo "🔍 Validating action for GitHub Marketplace..."
+          
+          # Check required files exist
+          if [ ! -f "action.yml" ]; then
+            echo "❌ action.yml is missing"
+            exit 1
+          fi
+          
+          if [ ! -f "README.md" ]; then
+            echo "❌ README.md is missing"
+            exit 1
+          fi
+          
+          if [ ! -f "LICENSE" ]; then
+            echo "❌ LICENSE file is missing"
+            exit 1
+          fi
+          
+          if [ ! -d "dist" ] || [ ! -f "dist/index.js" ]; then
+            echo "❌ Built distribution files are missing"
+            exit 1
+          fi
+          
+          # Check action.yml has required fields
+          if ! grep -q "^name:" action.yml; then
+            echo "❌ action.yml missing 'name' field"
+            exit 1
+          fi
+          
+          if ! grep -q "^description:" action.yml; then
+            echo "❌ action.yml missing 'description' field"
+            exit 1
+          fi
+          
+          if ! grep -q "^runs:" action.yml; then
+            echo "❌ action.yml missing 'runs' field"
+            exit 1
+          fi
+          
+          # Check branding exists
+          if ! grep -q "^branding:" action.yml; then
+            echo "⚠️ action.yml missing 'branding' field (recommended for marketplace)"
+          fi
+          
+          echo "✅ Action validation successful!"
+
+      - name: Check release tag format
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          echo "🏷️ Checking release tag: $TAG_NAME"
+          
+          if [[ ! $TAG_NAME =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "⚠️ Tag format doesn't follow semantic versioning (vX.Y.Z)"
+            echo "   Current: $TAG_NAME"
+            echo "   Expected: v1.0.0, v2.1.3, etc."
+          else
+            echo "✅ Tag format is valid: $TAG_NAME"
+          fi
+
+      - name: Generate marketplace checklist
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          REPO_URL="https://github.com/${{ github.repository }}"
+          
+          echo "📋 GitHub Marketplace Publishing Checklist"
+          echo "==========================================="
+          echo ""
+          echo "✅ Release $TAG_NAME has been created"
+          echo "✅ Action files validated"
+          echo "✅ Distribution files built"
+          echo ""
+          echo "📝 Next Steps:"
+          echo "1. Go to: $REPO_URL/releases"
+          echo "2. Find release '$TAG_NAME' and click 'Edit'"
+          echo "3. Check '📦 Publish this Action to the GitHub Marketplace'"
+          echo "4. Fill in the marketplace details:"
+          echo "   - Primary Category: 'Continuous Integration'"
+          echo "   - Secondary Category: 'Project Management'"
+          echo "   - Keywords: ai, release-notes, automation, slack, gemini"
+          echo "5. Review and submit for publication"
+          echo ""
+          echo "🎯 Marketplace Categories Suggestions:"
+          echo "   - Continuous Integration"
+          echo "   - Project Management"
+          echo "   - Code Quality"
+          echo "   - Monitoring"
+          echo ""
+          echo "🏷️ Suggested Keywords:"
+          echo "   ai, release-notes, automation, slack, gemini, vertex-ai"
+          echo "   changelog, versioning, github-action, notifications"
+
+      - name: Post to repository dispatch
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tagName = context.payload.release.tag_name;
+            const releaseUrl = context.payload.release.html_url;
+            
+            // Create an issue to track marketplace submission
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Marketplace Publication - ${tagName}`,
+              body: `## 🚀 Ready for Marketplace Publication
+
+Release \`${tagName}\` has been created and is ready for GitHub Marketplace publication.
+
+### 📝 Action Items:
+- [ ] Visit [release page](${releaseUrl})
+- [ ] Click "Edit" on the release
+- [ ] Check "📦 Publish this Action to the GitHub Marketplace"
+- [ ] Fill in marketplace details:
+  - **Primary Category**: Continuous Integration
+  - **Secondary Category**: Project Management  
+  - **Keywords**: \`ai, release-notes, automation, slack, gemini, vertex-ai, changelog, versioning, github-action, notifications\`
+- [ ] Submit for publication
+- [ ] Close this issue once published
+
+### 📚 Resources:
+- [Publishing actions in GitHub Marketplace](https://docs.github.com/en/actions/creating-actions/publishing-actions-in-github-marketplace)
+- [Marketplace guidelines](https://docs.github.com/en/actions/creating-actions/about-custom-actions#choosing-a-location-for-your-action)
+
+**Release**: ${releaseUrl}
+**Tag**: \`${tagName}\`
+**Timestamp**: ${new Date().toISOString()}`,
+              labels: ['release', 'marketplace']
+            });
+
+            console.log('✅ Created marketplace publication issue');
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "📊 Marketplace Publication Summary"
+          echo "================================="
+          echo "Release: ${{ github.event.release.tag_name }}"
+          echo "Status: Ready for marketplace publication"
+          echo "Action: Manual publication required via GitHub UI"
+          echo "Next: Check repository issues for tracking"

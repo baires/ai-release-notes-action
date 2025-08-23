@@ -363,11 +363,32 @@ See the [`examples/`](./examples/) directory for complete workflow examples:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 📦 Releases
+
+### Latest Release
+[![GitHub release](https://img.shields.io/github/v/release/baires/ai-release-notes-action)](https://github.com/baires/ai-release-notes-action/releases)
+[![GitHub Marketplace](https://img.shields.io/badge/Marketplace-AI--Powered%20Release%20Notes-blue?logo=github)](https://github.com/marketplace/actions/ai-powered-release-notes-generator)
+
+### Usage in Workflows
+```yaml
+# Use specific version (recommended for production)
+- uses: baires/ai-release-notes-action@v1.0.0
+
+# Use major version (gets latest v1.x.x automatically)
+- uses: baires/ai-release-notes-action@v1
+
+# Use main branch (not recommended for production)
+- uses: baires/ai-release-notes-action@main
+```
+
+See [RELEASES.md](./RELEASES.md) for detailed release information and publishing process.
+
 ## 🆘 Support
 
 - 🐛 [Bug Reports](https://github.com/baires/ai-release-notes-action/issues)
 - 💡 [Feature Requests](https://github.com/baires/ai-release-notes-action/issues)
 - 💬 [Discussions](https://github.com/baires/ai-release-notes-action/discussions)
+- 📖 [Documentation](https://github.com/baires/ai-release-notes-action/wiki)
 
 ## 🙏 Acknowledgments
 
