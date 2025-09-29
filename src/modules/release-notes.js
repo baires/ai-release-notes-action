@@ -82,44 +82,46 @@ class ReleaseNotesGenerator {
       return this.interpolateTemplate(customPrompt, prAnalysis, versionInfo);
     }
     
-    return `You are an expert technical writer. Analyze the PR changes and generate release notes.
+    return `You are an expert technical writer. Analyze the following PR and generate concise release notes.
 
-First, read the PR information:
-cat pr_details.json
-cat pr_diff.txt
-
-Generate release notes for version ${versionInfo.newVersion} in ${this.config.inputs.environment} environment.
-Use BUILD_NUMBER as the build identifier.
-
-PR Analysis Summary:
+PR Information:
 - Title: ${prAnalysis.analysis.title}
-- Type: ${prAnalysis.analysis.changeTypes.join(', ')}
+- Description: ${prAnalysis.analysis.body || 'No description provided'}
+- Type: ${prAnalysis.analysis.changeTypes.join(', ') || 'general'}
 - Files changed: ${prAnalysis.analysis.filesChanged.length}
 - Breaking changes: ${prAnalysis.analysis.isBreakingChange ? 'Yes' : 'No'}
 - Bug fixes: ${prAnalysis.analysis.isBugfix ? 'Yes' : 'No'}
 - New features: ${prAnalysis.analysis.isFeature ? 'Yes' : 'No'}
 
-Format your response as:
+Your task: Generate ACTUAL release notes based on the above information. Do NOT use placeholders or examples.
+
+Format your response EXACTLY as follows (replace the bracketed sections with real content):
 
 RELEASE_NOTES_START
 ## v${versionInfo.newVersion} - BUILD_NUMBER [${this.config.inputs.environment}]
 
 ### Public
-[User-facing changes in plain language]
+- [Write 1-3 actual user-facing changes based on the PR title and description]
 
 ### Internal
-[Technical changes with details]
+- [Write 2-5 actual technical changes based on the files and change types]
 RELEASE_NOTES_END
 
 SLACK_MESSAGE_START
-🚀 *v${versionInfo.newVersion} - BUILD_NUMBER [${this.config.inputs.environment}]*
+Hey team! 👋 Just deployed **v${versionInfo.newVersion}** to **${this.config.inputs.environment}**.
 
-*Public Changes:*
-• [User-facing bullet points]
+**What changed:**
+• [List 2-4 specific changes from the PR - be concrete and specific]
 
-*Internal Changes:*
-• [Technical bullet points, max 5]
-SLACK_MESSAGE_END`;
+**Testing notes:**
+• [If applicable, mention what needs testing or any important notes]
+SLACK_MESSAGE_END
+
+IMPORTANT:
+- Do NOT use placeholder text like "Briefly list features" or "mention anything the team needs".
+- Write ACTUAL, SPECIFIC content based on the PR information above.
+- The Slack message supports Markdown formatting (bold, italic, code blocks, links, etc.).
+- Use Markdown formatting to make the message clear and readable.`;
   }
 
   async callGeminiAPI(prompt) {
