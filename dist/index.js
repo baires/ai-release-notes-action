@@ -38803,7 +38803,7 @@ class Config {
   loadInputs() {
     return {
       // Core Configuration
-      triggerLabel: core.getInput('trigger_label') || 'release-notes',
+      triggerLabel: core.getInput('trigger_label'),
       targetBranch: core.getInput('target_branch') || 'main',
       
       // AI Configuration
