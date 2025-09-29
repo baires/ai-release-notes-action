@@ -372,7 +372,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### Usage in Workflows
 ```yaml
 # Use specific version (recommended for production)
-- uses: baires/ai-release-notes-action@v1.0.4
+- uses: baires/ai-release-notes-action@v1.0.5
 
 # Use major version (gets latest v1.x.x automatically)
 - uses: baires/ai-release-notes-action@v1
