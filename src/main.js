@@ -191,10 +191,12 @@ async function checkTriggerConditions(config, context) {
     return { run: false, reason: `Target branch ${pr.base.ref} not in allowed list` };
   }
   
-  // Check for trigger label
-  const hasLabel = pr.labels.some(label => label.name === config.inputs.triggerLabel);
-  if (!hasLabel) {
-    return { run: false, reason: `Missing required label: ${config.inputs.triggerLabel}` };
+  // Check for trigger label (optional - skip check if empty)
+  if (config.inputs.triggerLabel) {
+    const hasLabel = pr.labels.some(label => label.name === config.inputs.triggerLabel);
+    if (!hasLabel) {
+      return { run: false, reason: `Missing required label: ${config.inputs.triggerLabel}` };
+    }
   }
   
   // Check if we should skip for no changes
