@@ -56,8 +56,8 @@ fi
 
 echo "🔍 Scanning for version references..."
 
-# Find all version references  
-ALL_REFS_RAW=$(find examples/ README.md RELEASES.md -type f 2>/dev/null -exec grep -Hn "baires/ai-release-notes-action@v[0-9]*\(\.[0-9]*\.[0-9]*\)\?" {} \; | sort)
+# Find all version references (excluding sed patterns in documentation)
+ALL_REFS_RAW=$(find examples/ README.md RELEASES.md -type f 2>/dev/null -exec grep -Hn "baires/ai-release-notes-action@v[0-9]*\(\.[0-9]*\.[0-9]*\)\?" {} \; | grep -v "sed -i" | sort)
 
 # Also check for GitHub URL references in source code
 SRC_REFS_RAW=$(find src/ -name "*.js" -type f 2>/dev/null -exec grep -Hn "github.com/baires/ai-release-notes-action" {} \; | sort || true)
