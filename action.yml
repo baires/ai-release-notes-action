@@ -6,6 +6,12 @@ branding:
   color: 'blue'
 
 inputs:
+  # GitHub Configuration
+  token:
+    description: 'GitHub token for API access'
+    required: false
+    default: ${{ github.token }}
+
   # Core Configuration
   trigger_label:
     description: 'Label required on PR to trigger release notes generation (leave empty to run for all PRs)'

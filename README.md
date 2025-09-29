@@ -51,8 +51,11 @@ jobs:
 ```yaml
 - uses: baires/ai-release-notes-action@v1
   with:
+    # GitHub token is automatically provided
+    # token: ${{ github.token }}  # Optional: only if you need to override
+
     # Core Configuration
-    trigger_label: 'release-notes'
+    trigger_label: 'release-notes'  # Leave empty to run for all PRs
     target_branch: 'main'
     environment: 'PROD'
     
@@ -83,11 +86,17 @@ jobs:
 
 ## 📖 Configuration Options
 
+### GitHub Configuration
+
+| Input | Description | Default | Required |
+|-------|-------------|---------|----------|
+| `token` | GitHub token for API access | `${{ github.token }}` | No |
+
 ### Core Settings
 
 | Input | Description | Default | Required |
 |-------|-------------|---------|----------|
-| `trigger_label` | Label required on PR to trigger release notes | `release-notes` | No |
+| `trigger_label` | Label required on PR to trigger (leave empty to run for all PRs) | `` | No |
 | `target_branch` | Target branch for release | `main` | No |
 | `environment` | Deployment environment (PROD, DEV, STAGING) | `PROD` | No |
 
