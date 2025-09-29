@@ -62335,6 +62335,10 @@ SLACK_MESSAGE_END`;
 
   parseAIResponse(aiOutput, buildNumber) {
     try {
+      // Log the raw AI output for debugging
+      core.info('AI Response length: ' + aiOutput.length);
+      core.info('AI Response preview: ' + aiOutput.substring(0, 200));
+
       let releaseNotes = '';
       let slackMessage = '';
 
@@ -62350,20 +62354,34 @@ SLACK_MESSAGE_END`;
         slackMessage = slackMessageMatch[1].trim();
       }
 
+      // If markers not found, try to use the entire output as both
+      if (!releaseNotes && !slackMessage) {
+        core.warning('AI response markers not found, using full response');
+        // Use the full output for both
+        releaseNotes = aiOutput;
+        slackMessage = this.extractSlackSummary(aiOutput, buildNumber);
+      } else if (!releaseNotes) {
+        releaseNotes = aiOutput;
+      } else if (!slackMessage) {
+        slackMessage = this.extractSlackSummary(releaseNotes, buildNumber);
+      }
+
       // Replace BUILD_NUMBER placeholder
       releaseNotes = releaseNotes.replace(/BUILD_NUMBER/g, buildNumber);
       slackMessage = slackMessage.replace(/BUILD_NUMBER/g, buildNumber);
-
-      // Validate we got both sections
-      if (!releaseNotes || !slackMessage) {
-        throw new Error('Failed to parse AI response - missing sections');
-      }
 
       return { releaseNotes, slackMessage };
     } catch (error) {
       core.warning(`Failed to parse AI response: ${error.message}`);
       throw error;
     }
+  }
+
+  extractSlackSummary(text, buildNumber) {
+    // Extract first few lines or create a simple summary
+    const lines = text.split('\n').filter(line => line.trim());
+    const summary = lines.slice(0, 5).join('\n');
+    return `🚀 Build ${buildNumber} deployed\n\n${summary}`;
   }
 
   generateFromTemplate(prAnalysis, versionInfo) {
