@@ -1,6 +1,6 @@
 {
   "name": "ai-release-notes-action",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "AI-powered GitHub Action for generating release notes with optional integrations",
   "main": "dist/index.js",
   "scripts": {
@@ -29,6 +29,7 @@
     "@actions/github": "^6.0.0",
     "@actions/exec": "^1.1.1",
     "axios": "^1.6.0",
+    "google-auth-library": "^9.0.0",
     "semver": "^7.5.4"
   },
   "devDependencies": {

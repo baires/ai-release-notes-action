@@ -1,5 +1,4 @@
 const core = require('@actions/core');
-const exec = require('@actions/exec');
 const fs = require('fs');
 const path = require('path');
 
@@ -58,7 +57,7 @@ class ReleaseNotesGenerator {
   async generateWithAI(prAnalysis, versionInfo) {
     try {
       const prompt = this.buildAIPrompt(prAnalysis, versionInfo);
-      const geminiResult = await this.callGeminiCLI(prompt);
+      const geminiResult = await this.callGeminiAPI(prompt);
       
       if (geminiResult.success && geminiResult.output) {
         const parsed = this.parseAIResponse(geminiResult.output, versionInfo.buildNumber);
@@ -123,87 +122,120 @@ SLACK_MESSAGE_START
 SLACK_MESSAGE_END`;
   }
 
-  async callGeminiCLI(prompt) {
+  async callGeminiAPI(prompt) {
     try {
-      // Prepare Gemini CLI configuration
-      const geminiSettings = {
-        maxSessionTurns: 10,
-        telemetry: {
-          enabled: false,
-          target: 'gcp'
-        }
-      };
-
-      // Write prompt to temporary file to avoid command line length limits
-      const promptFile = path.join(process.cwd(), 'gemini_prompt.txt');
-      await fs.promises.writeFile(promptFile, prompt);
-
-      let geminiCommand = [];
-      let geminiEnv = { ...process.env };
+      const axios = require('axios');
 
       if (this.config.inputs.useVertexAi) {
-        // Use Vertex AI
-        geminiCommand = [
-          'gemini-cli',
-          '--project', this.config.inputs.gcpProjectId,
-          '--location', this.config.inputs.gcpLocation,
-          '--settings', JSON.stringify(geminiSettings),
-          '--prompt-file', promptFile
-        ];
-
-        if (this.config.inputs.gcpServiceAccount) {
-          geminiEnv.GOOGLE_SERVICE_ACCOUNT = this.config.inputs.gcpServiceAccount;
-        }
-      } else {
-        // Use Gemini API
-        geminiCommand = [
-          'gemini-cli',
-          '--api-key', this.config.inputs.geminiApiKey,
-          '--settings', JSON.stringify(geminiSettings),
-          '--prompt-file', promptFile
-        ];
+        return await this.callVertexAI(prompt);
       }
 
-      let output = '';
-      let errorOutput = '';
+      // Use Gemini API directly
+      const apiKey = this.config.inputs.geminiApiKey;
+      if (!apiKey) {
+        core.warning('No Gemini API key provided');
+        return { success: false };
+      }
 
-      const options = {
-        listeners: {
-          stdout: (data) => {
-            output += data.toString();
-          },
-          stderr: (data) => {
-            errorOutput += data.toString();
-          }
-        },
-        env: geminiEnv,
-        silent: true,
-        ignoreReturnCode: true
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+      const requestBody = {
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048
+        }
       };
 
-      const exitCode = await exec.exec(geminiCommand[0], geminiCommand.slice(1), options);
+      core.info('Calling Gemini API...');
+      const response = await axios.post(url, requestBody, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
 
-      // Clean up prompt file
-      try {
-        await fs.promises.unlink(promptFile);
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-
-      if (exitCode === 0 && output.trim()) {
+      if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const output = response.data.candidates[0].content.parts[0].text;
         return {
           success: true,
           output: output.trim()
         };
       } else {
-        core.warning(`Gemini CLI failed with exit code ${exitCode}`);
-        if (errorOutput) {
-          core.warning(`Error output: ${errorOutput}`);
-        }
+        core.warning('Gemini API returned unexpected response format');
         return { success: false };
       }
     } catch (error) {
-      core.warning(`Failed to call Gemini CLI: ${error.message}`);
+      core.warning(`Failed to call Gemini API: ${error.message}`);
+      if (error.response?.data) {
+        core.warning(`API Error: ${JSON.stringify(error.response.data)}`);
+      }
+      return { success: false };
+    }
+  }
+
+  async callVertexAI(prompt) {
+    try {
+      const axios = require('axios');
+      const { GoogleAuth } = require('google-auth-library');
+
+      const auth = new GoogleAuth({
+        scopes: ['https://www.googleapis.com/auth/cloud-platform']
+      });
+
+      const client = await auth.getClient();
+      const projectId = this.config.inputs.gcpProjectId;
+      const location = this.config.inputs.gcpLocation;
+
+      const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-1.5-flash:generateContent`;
+
+      const accessToken = await client.getAccessToken();
+
+      const requestBody = {
+        contents: [{
+          role: 'user',
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048
+        }
+      };
+
+      core.info('Calling Vertex AI...');
+      const response = await axios.post(url, requestBody, {
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+
+      if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        const output = response.data.candidates[0].content.parts[0].text;
+        return {
+          success: true,
+          output: output.trim()
+        };
+      } else {
+        core.warning('Vertex AI returned unexpected response format');
+        return { success: false };
+      }
+    } catch (error) {
+      core.warning(`Failed to call Vertex AI: ${error.message}`);
+      if (error.response?.data) {
+        core.warning(`API Error: ${JSON.stringify(error.response.data)}`);
+      }
       return { success: false };
     }
   }
