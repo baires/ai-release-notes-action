@@ -57,7 +57,7 @@ AI-powered GitHub Action that automatically generates intelligent release notes 
 - **Full versions**: `v1.0.0`, `v1.1.0`, `v2.0.0`
 - **Major versions**: `v1`, `v2` (automatically updated to point to latest)
 - **Usage in workflows**:
-  - `baires/ai-release-notes-action@v1.0.9` (specific version)
+  - `baires/ai-release-notes-action@v1.0.10` (specific version)
   - `baires/ai-release-notes-action@v1` (latest v1.x.x)
 
 ## 📋 Release Checklist
@@ -161,7 +161,7 @@ npm test -- core.test.js
 ### "Mixed version references in documentation"
 ```bash
 # Manually update specific files
-sed -i 's|baires/ai-release-notes-action@v1[0-9]*\.[0-9]*\.[0-9]*|baires/ai-release-notes-action@v1.0.9|g' README.md
+sed -i 's|baires/ai-release-notes-action@v1[0-9]*\.[0-9]*\.[0-9]*|baires/ai-release-notes-action@v1.0.10|g' README.md
 
 # Or use the release script to update everything
 ./scripts/release.sh 1.0.0
