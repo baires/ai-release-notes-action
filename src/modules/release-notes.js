@@ -124,51 +124,41 @@ SLACK_MESSAGE_END`;
 
   async callGeminiAPI(prompt) {
     try {
-      const axios = require('axios');
-
       if (this.config.inputs.useVertexAi) {
         return await this.callVertexAI(prompt);
       }
 
-      // Use Gemini API directly
+      // Use Gemini API with official SDK
       const apiKey = this.config.inputs.geminiApiKey;
       if (!apiKey) {
         core.warning('No Gemini API key provided');
         return { success: false };
       }
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      const { GoogleGenAI } = require('@google/genai');
+      const ai = new GoogleGenAI({ apiKey: apiKey });
 
-      const requestBody = {
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
+      core.info('Calling Gemini API...');
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-exp',
+        contents: prompt,
+        config: {
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
           maxOutputTokens: 2048
         }
-      };
-
-      core.info('Calling Gemini API...');
-      const response = await axios.post(url, requestBody, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000
       });
 
-      if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-        const output = response.data.candidates[0].content.parts[0].text;
+      const output = response.text;
+
+      if (output) {
         return {
           success: true,
           output: output.trim()
         };
       } else {
-        core.warning('Gemini API returned unexpected response format');
+        core.warning('Gemini API returned empty response');
         return { success: false };
       }
     } catch (error) {
