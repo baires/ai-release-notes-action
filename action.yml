@@ -8,9 +8,9 @@ branding:
 inputs:
   # Core Configuration
   trigger_label:
-    description: 'Label required on PR to trigger release notes generation'
+    description: 'Label required on PR to trigger release notes generation (leave empty to run for all PRs)'
     required: false
-    default: 'release-notes'
+    default: ''
   
   target_branch:
     description: 'Target branch for release (main, dev, etc.)'
