@@ -55,6 +55,19 @@ jobs:
       - name: Build action
         run: npm run build
 
+      - name: Commit dist files
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+          if [ -n "$(git status --porcelain dist/)" ]; then
+            git add dist/
+            git commit -m "build: compile distribution files for release"
+            echo "✅ Distribution files committed"
+          else
+            echo "ℹ️  No changes to distribution files"
+          fi
+
       - name: Determine version
         id: version
         run: |
@@ -244,6 +257,12 @@ jobs:
           
           # Set output for release creation
           echo "notes_file=release-notes.md" >> $GITHUB_OUTPUT
+
+      - name: Push changes to main
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          # Push any commits (dist files, version updates) before tagging
+          git push origin main
 
       - name: Create Git tag
         if: steps.check_tag.outputs.exists == 'false'
