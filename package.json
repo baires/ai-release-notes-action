@@ -1,6 +1,6 @@
 {
   "name": "ai-release-notes-action",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "AI-powered GitHub Action for generating release notes with optional integrations",
   "main": "dist/index.js",
   "scripts": {

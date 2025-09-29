@@ -92,14 +92,14 @@ class PRAnalyzer {
     }
   }
 
-  analyzeChanges(pr, diff, commits) {
+  analyzeChanges(pr, diff, commits = []) {
     const analysis = {
       title: pr.title,
       body: pr.body || '',
-      labels: pr.labels.map(label => label.name),
-      baseBranch: pr.base.ref,
-      headBranch: pr.head.ref,
-      author: pr.user.login,
+      labels: (pr.labels || []).map(label => label.name),
+      baseBranch: pr.base?.ref || 'unknown',
+      headBranch: pr.head?.ref || 'unknown',
+      author: pr.user?.login || 'unknown',
       createdAt: pr.created_at,
       mergedAt: pr.merged_at,
       filesChanged: [],
@@ -111,7 +111,7 @@ class PRAnalyzer {
     };
 
     // Analyze commit messages for conventional commits
-    commits.forEach(commit => {
+    (commits || []).forEach(commit => {
       const message = commit.message.toLowerCase();
       
       if (message.includes('breaking change') || message.includes('!:')) {
@@ -178,14 +178,14 @@ class PRAnalyzer {
     return analysis;
   }
 
-  async saveAnalysisFiles(pr, diff, commits, analysis) {
+  async saveAnalysisFiles(pr, diff, commits = [], analysis) {
     try {
       // Save PR details as JSON
       const prDetails = {
         title: pr.title,
         body: pr.body,
-        labels: pr.labels.map(l => l.name),
-        commits: commits,
+        labels: (pr.labels || []).map(l => l.name),
+        commits: commits || [],
         analysis: analysis
       };
       
