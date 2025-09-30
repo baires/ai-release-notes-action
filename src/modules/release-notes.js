@@ -82,46 +82,56 @@ class ReleaseNotesGenerator {
       return this.interpolateTemplate(customPrompt, prAnalysis, versionInfo);
     }
     
-    return `You are an expert technical writer. Analyze the following PR and generate concise release notes.
+    const commits = prAnalysis.commits && prAnalysis.commits.length > 0
+      ? prAnalysis.commits.map(c => `  - ${c.message.split('\n')[0]} (${c.shortSha})`).join('\n')
+      : 'No commit details available';
 
-PR Information:
-- Title: ${prAnalysis.analysis.title}
-- Description: ${prAnalysis.analysis.body || 'No description provided'}
-- Type: ${prAnalysis.analysis.changeTypes.join(', ') || 'general'}
-- Files changed: ${prAnalysis.analysis.filesChanged.length}
-- Breaking changes: ${prAnalysis.analysis.isBreakingChange ? 'Yes' : 'No'}
-- Bug fixes: ${prAnalysis.analysis.isBugfix ? 'Yes' : 'No'}
-- New features: ${prAnalysis.analysis.isFeature ? 'Yes' : 'No'}
+    return `Analyze this pull request and write specific, concrete release notes.
 
-Your task: Generate ACTUAL release notes based on the above information. Do NOT use placeholders or examples.
+PR DETAILS:
+Title: ${prAnalysis.analysis.title}
+Description: ${prAnalysis.analysis.body || 'No description'}
+Type: ${prAnalysis.analysis.changeTypes.join(', ') || 'general changes'}
+Files: ${prAnalysis.analysis.filesChanged.slice(0, 10).join(', ') || 'No files listed'}
+Breaking: ${prAnalysis.analysis.isBreakingChange ? 'Yes' : 'No'}
+Bug fix: ${prAnalysis.analysis.isBugfix ? 'Yes' : 'No'}
+Feature: ${prAnalysis.analysis.isFeature ? 'Yes' : 'No'}
 
-Format your response EXACTLY as follows (replace the bracketed sections with real content):
+COMMITS:
+${commits}
+
+Write release notes based on the ACTUAL changes above. Extract real information from the title, description, files, and commits.
+
+Example (do NOT copy this, write your own based on actual PR data):
+If PR title is "Add user authentication with OAuth", write:
+"- Added OAuth-based authentication for user login"
+NOT "- [Add authentication feature]" or "- User-facing authentication improvements"
+
+Format EXACTLY as shown (but with real content):
 
 RELEASE_NOTES_START
 ## v${versionInfo.newVersion} - BUILD_NUMBER [${this.config.inputs.environment}]
 
 ### Public
-- [Write 1-3 actual user-facing changes based on the PR title and description]
+- [Real user-facing change from PR title/description]
+- [Another specific change if applicable]
 
 ### Internal
-- [Write 2-5 actual technical changes based on the files and change types]
+- [Specific technical change from commits/files]
+- [Another technical detail]
+- [More details as relevant]
 RELEASE_NOTES_END
 
 SLACK_MESSAGE_START
 Hey team! 👋 Just deployed **v${versionInfo.newVersion}** to **${this.config.inputs.environment}**.
 
 **What changed:**
-• [List 2-4 specific changes from the PR - be concrete and specific]
+• [Specific change from PR - be concrete]
+• [Another concrete change]
 
 **Testing notes:**
-• [If applicable, mention what needs testing or any important notes]
-SLACK_MESSAGE_END
-
-IMPORTANT:
-- Do NOT use placeholder text like "Briefly list features" or "mention anything the team needs".
-- Write ACTUAL, SPECIFIC content based on the PR information above.
-- The Slack message supports Markdown formatting (bold, italic, code blocks, links, etc.).
-- Use Markdown formatting to make the message clear and readable.`;
+• [Real testing instruction if needed, or remove this section]
+SLACK_MESSAGE_END`;
   }
 
   async callGeminiAPI(prompt) {
@@ -141,13 +151,14 @@ IMPORTANT:
       const ai = new GoogleGenAI({ apiKey: apiKey });
 
       core.info('Calling Gemini API...');
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash-exp',
+      const model = ai.models.get('gemini-2.0-flash-exp');
+      const response = await model.generateContent({
+        systemInstruction: 'You are an expert technical writer who creates concise, specific release notes. Never use placeholders or generic text.',
         contents: prompt,
         config: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
+          temperature: 0.4,
+          topK: 20,
+          topP: 0.8,
           maxOutputTokens: 2048
         }
       });
@@ -359,7 +370,42 @@ ${slackCommits.map(change => `• ${change}`).join('\n')}`;
   }
 
   interpolateTemplate(template, prAnalysis, versionInfo) {
-    return template
+    const commits = prAnalysis.commits && prAnalysis.commits.length > 0
+      ? prAnalysis.commits.map(c => `  - ${c.message.split('\n')[0]} (${c.shortSha})`).join('\n')
+      : 'No commit details available';
+
+    const files = prAnalysis.analysis.filesChanged.slice(0, 10).join(', ') || 'No files listed';
+
+    // Build full context with PR data
+    const prContext = `
+PR INFORMATION:
+- Title: ${prAnalysis.analysis.title}
+- Description: ${prAnalysis.analysis.body || 'No description'}
+- Author: ${prAnalysis.analysis.author}
+- Type: ${prAnalysis.analysis.changeTypes.join(', ') || 'general changes'}
+- Files changed: ${files}
+- Breaking change: ${prAnalysis.analysis.isBreakingChange ? 'Yes' : 'No'}
+- Bug fix: ${prAnalysis.analysis.isBugfix ? 'Yes' : 'No'}
+- New feature: ${prAnalysis.analysis.isFeature ? 'Yes' : 'No'}
+
+COMMITS:
+${commits}
+
+USER INSTRUCTIONS:
+${template}
+
+Generate output in this format:
+
+RELEASE_NOTES_START
+[Your release notes here]
+RELEASE_NOTES_END
+
+SLACK_MESSAGE_START
+[Your Slack message here]
+SLACK_MESSAGE_END
+`;
+
+    return prContext
       .replace(/\$\{version\}/g, versionInfo.newVersion)
       .replace(/\$\{previousVersion\}/g, versionInfo.previousVersion)
       .replace(/\$\{environment\}/g, this.config.inputs.environment)
