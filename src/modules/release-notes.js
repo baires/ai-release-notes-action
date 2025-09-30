@@ -151,10 +151,10 @@ SLACK_MESSAGE_END`;
       const ai = new GoogleGenAI({ apiKey: apiKey });
 
       core.info('Calling Gemini API...');
-      const model = ai.models.get('gemini-2.0-flash-exp');
-      const response = await model.generateContent({
-        systemInstruction: 'You are an expert technical writer who creates concise, specific release notes. Never use placeholders or generic text.',
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash-exp',
         contents: prompt,
+        systemInstruction: 'You are an expert technical writer who creates concise, specific release notes. Never use placeholders or generic text.',
         config: {
           temperature: 0.4,
           topK: 20,
