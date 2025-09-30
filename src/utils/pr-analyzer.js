@@ -23,7 +23,7 @@ class PRAnalyzer {
       const { data: pr } = await this.octokit.rest.pulls.get({
         owner: this.context.repo.owner,
         repo: this.context.repo.repo,
-        pull_request_number: prNumber
+        pull_number: prNumber
       });
 
       // Get PR diff
@@ -56,12 +56,12 @@ class PRAnalyzer {
       const { data: diff } = await this.octokit.rest.pulls.get({
         owner: this.context.repo.owner,
         repo: this.context.repo.repo,
-        pull_request_number: prNumber,
+        pull_number: prNumber,
         mediaType: {
           format: 'diff'
         }
       });
-      
+
       return diff;
     } catch (error) {
       core.warning(`Failed to get PR diff: ${error.message}`);
@@ -74,9 +74,9 @@ class PRAnalyzer {
       const { data: commits } = await this.octokit.rest.pulls.listCommits({
         owner: this.context.repo.owner,
         repo: this.context.repo.repo,
-        pull_request_number: prNumber
+        pull_number: prNumber
       });
-      
+
       return commits.map(commit => ({
         sha: commit.sha,
         shortSha: commit.sha.substring(0, 7),
